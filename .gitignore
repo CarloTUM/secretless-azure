@@ -1,0 +1,13 @@
+# Compiled ARM output from `az bicep build`
+bicep/**/main.json
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/

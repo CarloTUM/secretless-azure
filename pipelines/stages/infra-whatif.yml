@@ -1,0 +1,50 @@
+# Dry run: ensure resource group -> validate (what-if), no deploy
+trigger: none
+
+parameters:
+  - name: subscriptionId
+    type: string
+    default: ''
+
+  - name: azureServiceConnection
+    type: string
+    default: ''
+
+  - name: resourceGroupName
+    type: string
+    default: ''
+
+  - name: location
+    type: string
+    default: 'westeurope'
+
+  - name: compositionPath
+    type: string
+    default: 'bicep/compositions/secure-platform'
+
+  - name: parametersFile
+    type: string
+    default: 'main.dev.parameters.json'
+
+stages:
+  - stage: infra_rg
+    displayName: Resource Group
+    jobs:
+      - template: ../jobs/infra-rg-job.yml
+        parameters:
+          subscriptionId: ${{ parameters.subscriptionId }}
+          azureServiceConnection: ${{ parameters.azureServiceConnection }}
+          resourceGroupName: ${{ parameters.resourceGroupName }}
+          location: ${{ parameters.location }}
+
+  - stage: infra_validate
+    displayName: Infra Validate
+    dependsOn: infra_rg
+    jobs:
+      - template: ../jobs/infra-validate-job.yml
+        parameters:
+          subscriptionId: ${{ parameters.subscriptionId }}
+          azureServiceConnection: ${{ parameters.azureServiceConnection }}
+          resourceGroupName: ${{ parameters.resourceGroupName }}
+          compositionPath: ${{ parameters.compositionPath }}
+          parametersFile: ${{ parameters.parametersFile }}

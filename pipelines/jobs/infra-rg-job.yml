@@ -1,0 +1,29 @@
+parameters:
+  - name: subscriptionId
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: resourceGroupName
+    type: string
+  - name: location
+    type: string
+
+jobs:
+  - job: infra_rg
+    displayName: Ensure Resource Group
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - task: AzureCLI@2
+        displayName: Create/Ensure RG
+        inputs:
+          azureSubscription: ${{ parameters.azureServiceConnection }}
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -euo pipefail
+            az account set --subscription "${{ parameters.subscriptionId }}"
+            az group create \
+              --name "${{ parameters.resourceGroupName }}" \
+              --location "${{ parameters.location }}" \
+              --output none

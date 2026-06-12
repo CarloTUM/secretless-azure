@@ -1,0 +1,45 @@
+trigger: none
+
+variables:
+  - group: infra-dev-vars
+
+stages:
+  - stage: security_scan
+    displayName: Security Scan
+    jobs:
+      - template: ../jobs/security-scan-job.yml
+
+  - stage: infra_rg
+    displayName: Resource Group
+    dependsOn: security_scan
+    jobs:
+      - template: ../jobs/infra-rg-job.yml
+        parameters:
+          subscriptionId:         $(subscriptionId)
+          azureServiceConnection: $(azureServiceConnection)
+          resourceGroupName:      rg-platform-dev
+          location:               westeurope
+
+  - stage: infra_validate
+    displayName: Infra Validate
+    dependsOn: infra_rg
+    jobs:
+      - template: ../jobs/infra-validate-job.yml
+        parameters:
+          subscriptionId:         $(subscriptionId)
+          azureServiceConnection: $(azureServiceConnection)
+          resourceGroupName:      rg-platform-dev
+          compositionPath:        bicep/compositions/secure-platform
+          parametersFile:         main.dev.parameters.json
+
+  - stage: infra_deploy
+    displayName: Infra Deploy
+    dependsOn: infra_validate
+    jobs:
+      - template: ../jobs/infra-deploy-job.yml
+        parameters:
+          subscriptionId:         $(subscriptionId)
+          azureServiceConnection: $(azureServiceConnection)
+          resourceGroupName:      rg-platform-dev
+          compositionPath:        bicep/compositions/secure-platform
+          parametersFile:         main.dev.parameters.json

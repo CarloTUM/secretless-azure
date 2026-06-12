@@ -1,0 +1,46 @@
+parameters:
+  - name: subscriptionId
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: resourceGroupName
+    type: string
+  - name: compositionPath
+    type: string
+  - name: parametersFile
+    type: string
+
+jobs:
+  - job: infra_validate
+    displayName: Infra Validate (Bicep build + what-if)
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+
+      - task: AzureCLI@2
+        displayName: Bicep build + what-if
+        inputs:
+          azureSubscription: ${{ parameters.azureServiceConnection }}
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -euo pipefail
+            az account set --subscription "${{ parameters.subscriptionId }}"
+
+            ROOT_DIR="$(Build.SourcesDirectory)"
+            COMP_PATH="${ROOT_DIR}/${{ parameters.compositionPath }}"
+            TEMPLATE_FILE="${COMP_PATH}/main.bicep"
+            PARAM_FILE="${COMP_PATH}/${{ parameters.parametersFile }}"
+
+            echo "COMP_PATH: ${COMP_PATH}"
+            ls -la "${COMP_PATH}"
+
+            echo "Bicep build..."
+            az bicep build --file "${TEMPLATE_FILE}" --only-show-errors
+
+            echo "What-if..."
+            az deployment group what-if \
+              --resource-group "${{ parameters.resourceGroupName }}" \
+              --template-file "${TEMPLATE_FILE}" \
+              --parameters "@${PARAM_FILE}"

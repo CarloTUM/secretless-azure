@@ -1,0 +1,65 @@
+# DANGER: deletes ALL resource groups in the dev subscription except the ones
+# listed in PRESERVE / SKIP_PREFIX. Manual trigger only, use with care.
+#
+# Set EXPECTED_SUB_ID to your dev subscription id; it acts as a safety guard
+# against accidentally running this against the wrong subscription.
+trigger: none
+pr: none
+
+variables:
+  - group: infra-dev-vars
+
+jobs:
+- job: teardown
+  displayName: 'Teardown dev'
+  pool:
+    vmImage: ubuntu-latest
+  steps:
+  - task: AzureCLI@2
+    displayName: 'Delete resource groups'
+    inputs:
+      azureSubscription: $(azureServiceConnection)
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -euo pipefail
+
+        EXPECTED_SUB_ID="00000000-0000-0000-0000-000000000000"  # <-- your dev subscription id
+        PRESERVE=( "rg-platform-dev" )
+        SKIP_PREFIX=( "NetworkWatcherRG" "DefaultResourceGroup-" "MC_" "AzureBackupRG_" "databricks-rg-" )
+
+        az account set --subscription "$(subscriptionId)"
+        CUR_ID=$(az account show --query id -o tsv)
+        if [[ "$CUR_ID" != "$EXPECTED_SUB_ID" ]]; then
+          echo "##[error]Wrong subscription: $CUR_ID (expected $EXPECTED_SUB_ID)."
+          exit 1
+        fi
+
+        mapfile -t ALL < <(az group list --query "[].name" -o tsv)
+        for rg in "${ALL[@]}"; do
+          skip=0
+          for k in "${PRESERVE[@]}";    do [[ "$rg" == "$k"  ]] && { skip=1; break; }; done
+          (( skip )) && continue
+          for p in "${SKIP_PREFIX[@]}"; do [[ "$rg" == "$p"* ]] && { skip=1; break; }; done
+          (( skip )) && continue
+          echo "deleting $rg"
+          az group delete --name "$rg" --yes --no-wait
+        done
+
+  - task: AzureCLI@2
+    displayName: 'Purge soft-deleted key vaults'
+    inputs:
+      azureSubscription: $(azureServiceConnection)
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -euo pipefail
+        az account set --subscription "$(subscriptionId)"
+
+        # Key vaults survive resource group deletion in soft-deleted state and
+        # block re-deployment under the same name. Purge them; vaults with purge
+        # protection refuse this, which is intentional.
+        for v in $(az keyvault list-deleted --query "[].name" -o tsv); do
+          echo "purging soft-deleted vault $v"
+          az keyvault purge --name "$v" --no-wait || true
+        done

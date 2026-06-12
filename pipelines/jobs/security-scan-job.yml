@@ -1,0 +1,68 @@
+parameters:
+  - name: failOnFindings
+    type: boolean
+    default: false
+  - name: bicepDir
+    type: string
+    default: 'bicep'
+
+jobs:
+  - job: security_scan
+    displayName: Security Scan (Secrets + IaC)
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+      - checkout: self
+        fetchDepth: 0
+
+      - bash: |
+          set -uo pipefail
+          gitleaks_exit=0
+          docker run --rm \
+            -v "$(Build.SourcesDirectory):/repo" \
+            -w /repo \
+            zricethezav/gitleaks:latest \
+            detect --source=/repo --redact --report-format sarif --report-path gitleaks.sarif \
+            || gitleaks_exit=$?
+          if [ $gitleaks_exit -ne 0 ]; then
+            echo "##vso[task.logissue type=warning]gitleaks found secrets"
+            if [ "$FAIL_ON_FINDINGS" = "True" ]; then exit $gitleaks_exit; fi
+          fi
+        displayName: Secret Scan (gitleaks)
+        env:
+          FAIL_ON_FINDINGS: ${{ parameters.failOnFindings }}
+
+      - bash: |
+          set -uo pipefail
+          checkov_exit=0
+          docker run --rm \
+            -v "$(Build.SourcesDirectory):/repo" \
+            bridgecrew/checkov:latest \
+            --directory "/repo/${{ parameters.bicepDir }}" \
+            --framework bicep \
+            --output cli --output sarif --output-file-path console,/repo/checkov.sarif \
+            || checkov_exit=$?
+          if [ $checkov_exit -ne 0 ]; then
+            echo "##vso[task.logissue type=warning]checkov found IaC misconfigurations"
+            if [ "$FAIL_ON_FINDINGS" = "True" ]; then exit $checkov_exit; fi
+          fi
+        displayName: IaC Scan (checkov)
+        env:
+          FAIL_ON_FINDINGS: ${{ parameters.failOnFindings }}
+
+      - task: CopyFiles@2
+        displayName: Collect SARIF reports
+        condition: always()
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)'
+          Contents: '*.sarif'
+          TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+      - task: PublishBuildArtifacts@1
+        displayName: Publish security reports
+        condition: always()
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'security-reports'
+          publishLocation: 'Container'

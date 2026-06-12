@@ -1,0 +1,42 @@
+parameters:
+  - name: subscriptionId
+    type: string
+  - name: azureServiceConnection
+    type: string
+  - name: resourceGroupName
+    type: string
+  - name: compositionPath
+    type: string
+  - name: parametersFile
+    type: string
+
+jobs:
+  - job: infra_deploy
+    displayName: Infra Deploy (group create)
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+
+      - task: AzureCLI@2
+        displayName: Deploy Bicep
+        inputs:
+          azureSubscription: ${{ parameters.azureServiceConnection }}
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+            set -euo pipefail
+            az account set --subscription "${{ parameters.subscriptionId }}"
+
+            ROOT_DIR="$(Build.SourcesDirectory)"
+            COMP_PATH="${ROOT_DIR}/${{ parameters.compositionPath }}"
+            TEMPLATE_FILE="${COMP_PATH}/main.bicep"
+            PARAM_FILE="${COMP_PATH}/${{ parameters.parametersFile }}"
+
+            DEPLOYMENT_NAME="main-$(Build.BuildId)"
+
+            az deployment group create \
+              --name "${DEPLOYMENT_NAME}" \
+              --resource-group "${{ parameters.resourceGroupName }}" \
+              --template-file "${TEMPLATE_FILE}" \
+              --parameters "@${PARAM_FILE}"
