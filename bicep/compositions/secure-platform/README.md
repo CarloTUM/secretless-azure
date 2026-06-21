@@ -9,6 +9,8 @@ the templates.
 - Log Analytics workspace (`<env>-law-platform`), 90+ day retention
 - Virtual network (`<env>-vnet-platform`) with a `private-endpoints` and a `workload` subnet,
   plus the private DNS zone for Key Vault, linked to the VNet
+- A network security group per subnet (`<env>-nsg-private-endpoints`, `<env>-nsg-workload`);
+  the workload NSG denies inbound traffic from the Internet on top of the default rules
 - Key Vault (`<namePrefix>-<env>-kv`): RBAC, soft delete, purge protection, `Deny` network ACL,
   public access off, reachable only through a private endpoint
 - User-assigned managed identity (`<env>-id-platform`) with `Key Vault Secrets User`

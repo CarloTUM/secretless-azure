@@ -7,7 +7,7 @@ param location string = resourceGroup().location
 @description('Address space, e.g. ["10.20.0.0/16"]')
 param addressPrefixes array
 
-@description('Subnets: [{ name, addressPrefix, delegations?, privateEndpointNetworkPolicies? }]')
+@description('Subnets: [{ name, addressPrefix, networkSecurityGroupId?, delegations?, privateEndpointNetworkPolicies? }]')
 param subnets array
 
 @description('Resource tags')
@@ -27,6 +27,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
         addressPrefix: subnet.addressPrefix
         privateEndpointNetworkPolicies: subnet.?privateEndpointNetworkPolicies ?? 'Disabled'
         delegations: subnet.?delegations ?? []
+        networkSecurityGroup: subnet.?networkSecurityGroupId != null ? {
+          id: subnet.networkSecurityGroupId
+        } : null
       }
     }]
   }

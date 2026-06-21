@@ -62,6 +62,39 @@ module law '../../modules/log-analytics.bicep' = {
   }
 }
 
+module peNsg '../../modules/network/network-security-group.bicep' = {
+  name: 'privateEndpointsNsg'
+  params: {
+    name: '${environment}-nsg-private-endpoints'
+    location: location
+    tags: tags
+  }
+}
+
+module workloadNsg '../../modules/network/network-security-group.bicep' = {
+  name: 'workloadNsg'
+  params: {
+    name: '${environment}-nsg-workload'
+    location: location
+    securityRules: [
+      {
+        name: 'DenyInboundFromInternet'
+        properties: {
+          priority: 4096
+          direction: 'Inbound'
+          access: 'Deny'
+          protocol: '*'
+          sourceAddressPrefix: 'Internet'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+        }
+      }
+    ]
+    tags: tags
+  }
+}
+
 module network '../../modules/network/virtual-network.bicep' = {
   name: 'network'
   params: {
@@ -72,10 +105,12 @@ module network '../../modules/network/virtual-network.bicep' = {
       {
         name: 'private-endpoints'
         addressPrefix: privateEndpointSubnetPrefix
+        networkSecurityGroupId: peNsg.outputs.nsgId
       }
       {
         name: 'workload'
         addressPrefix: workloadSubnetPrefix
+        networkSecurityGroupId: workloadNsg.outputs.nsgId
       }
     ]
     tags: tags

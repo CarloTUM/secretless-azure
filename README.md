@@ -19,7 +19,8 @@ The platform is deployed once per environment (dev/prod) into its own resource g
 - **Key Vault** — RBAC authorization, soft delete, purge protection, network ACL set to `Deny`,
   public access off, reached only through a private endpoint.
 - **Virtual network** with a `private-endpoints` and a `workload` subnet, plus the private DNS
-  zone for the vault.
+  zone for the vault. Each subnet carries its own network security group; the workload subnet
+  denies inbound traffic from the Internet on top of the default rules.
 - **User-assigned managed identity** with `Key Vault Secrets User`. Workloads attach it to
   resolve secrets without ever holding a credential.
 - **Log Analytics** with audit/diagnostic settings streamed from the vault.
@@ -53,7 +54,7 @@ dependency on them though, plain `az deployment group create` works fine.
 .
 ├── bicep/
 │   ├── modules/                  # Generic, reusable building blocks
-│   │   ├── network/              # vnet, private DNS zone, private endpoint
+│   │   ├── network/              # vnet, nsg, private DNS zone, private endpoint
 │   │   └── security/             # role assignment, Defender for Cloud
 │   └── compositions/
 │       └── secure-platform/      # The locked-down baseline platform (per environment)
@@ -73,7 +74,8 @@ dependency on them though, plain `az deployment group create` works fine.
 | `key-vault.bicep` | Key Vault with RBAC, soft delete, purge protection, optional private-only + diagnostics |
 | `log-analytics.bicep` | Log Analytics workspace |
 | `managed-identity.bicep` | User-assigned managed identity |
-| `network/virtual-network.bicep` | Virtual network with a configurable list of subnets |
+| `network/virtual-network.bicep` | Virtual network with a configurable list of subnets, each with an optional NSG |
+| `network/network-security-group.bicep` | Network security group with a configurable list of security rules |
 | `network/private-dns-zone.bicep` | Private DNS zone linked to a VNet |
 | `network/private-endpoint.bicep` | Private endpoint for any service, with DNS zone group |
 | `security/role-assignment.bicep` | Resource-group scoped role assignment (any role) |
