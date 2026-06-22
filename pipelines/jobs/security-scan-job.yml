@@ -41,8 +41,12 @@ jobs:
             bridgecrew/checkov:latest \
             --directory "/repo/${{ parameters.bicepDir }}" \
             --framework bicep \
-            --output cli --output sarif --output-file-path console,/repo/checkov.sarif \
+            --output cli --output sarif --output-file-path console,/repo \
             || checkov_exit=$?
+          # checkov treats the sarif path as a directory and writes the report
+          # there as results_sarif.sarif. Rename it to the name the publish step
+          # globs for, otherwise the checkov report never gets published.
+          if [ -f results_sarif.sarif ]; then mv -f results_sarif.sarif checkov.sarif; fi
           if [ $checkov_exit -ne 0 ]; then
             echo "##vso[task.logissue type=warning]checkov found IaC misconfigurations"
             if [ "$FAIL_ON_FINDINGS" = "True" ]; then exit $checkov_exit; fi
