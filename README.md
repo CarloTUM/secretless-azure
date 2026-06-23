@@ -99,7 +99,9 @@ parameter table plus `main.dev.parameters.json` / `main.prod.parameters.json`.
 | `jobs/security-scan-job.yml` | gitleaks (secrets) + checkov (IaC misconfiguration), SARIF artifacts |
 
 Every infra deployment runs `az deployment group what-if` in its own stage before anything is
-changed, and the security scan runs first.
+changed, and the security scan runs first. The validate stage builds the Bicep with the linter
+rules in `bicepconfig.json`; rules set to `error` (unused params/vars, secret leaks in
+params/outputs) fail the build, so a deployment never starts on templates that violate them.
 
 | Entry point | Purpose |
 |---|---|
