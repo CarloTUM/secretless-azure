@@ -42,6 +42,9 @@ param defenderPlans array = [
 @maxValue(730)
 param logRetentionDays int = 90
 
+@description('Daily Log Analytics ingestion cap in GB (-1 = no cap). Use a low value in dev to bound cost.')
+param logDailyQuotaGb int = -1
+
 @description('Enable purge protection on the key vault (recommended for prod, cannot be disabled later)')
 param kvPurgeProtection bool = true
 
@@ -58,6 +61,7 @@ module law '../../modules/log-analytics.bicep' = {
     name: '${environment}-law-platform'
     location: location
     retentionDays: logRetentionDays
+    dailyQuotaGb: logDailyQuotaGb
     tags: tags
   }
 }

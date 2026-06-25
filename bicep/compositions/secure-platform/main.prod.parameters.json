@@ -8,6 +8,7 @@
     "allowPublicNetworkAccess": { "value": false        },
     "enableDefenderForCloud":   { "value": true         },
     "logRetentionDays":         { "value": 180          },
+    "logDailyQuotaGb":          { "value": -1           },
     "kvPurgeProtection":        { "value": true         },
 
     "vnetAddressPrefixes":         { "value": ["10.30.0.0/16"] },
