@@ -33,6 +33,7 @@ the templates.
 | `enableDefenderForCloud` | bool | `false` | Enable Defender plans on the subscription |
 | `defenderPlans` | array | KeyVaults, Arm, AppServices | Plans to enable |
 | `logRetentionDays` | int | `90` | Log Analytics retention |
+| `logDailyQuotaGb` | int | `-1` | Daily Log Analytics ingestion cap in GB (`-1` = no cap). Dev caps at 5 GB to bound cost |
 | `kvPurgeProtection` | bool | `true` | Key vault purge protection (cannot be disabled later) |
 | `tags` | object | `{}` | Tags for all resources |
 
